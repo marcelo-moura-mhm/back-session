@@ -3,6 +3,7 @@ const session = require('express-session');
 const bodyparser = require('body-parser');
 const path = require('path');
 const ejs = require('ejs');
+const { log } = require('console');
 
 const app = express();
 
@@ -19,23 +20,58 @@ app.set('view engine', 'ejs');
 var users = [
     {
         username: 'admin',
-        password: 123
+        email: 'admin@bcsession.com',
+        password: '123'
     }
 ];
+
+var logged = false;
 
 app.get('/', (req, res) => {
     res.render('index');
 });
 
 app.post('/', (req, res) => {
+
+    console.log(users);
+
     users.forEach((obj) => {
         if(req.body.username == obj.username && req.body.password == obj.password){
-            res.render('logged', {username:req.body.username});
+            logged = true;
         }
     });
-    res.render('index');
+    if(logged){
+        res.render('logged', {username:req.body.username});
+    }else{
+        res.render('index');
+    }
 });
 
-app.listen(8000, () => {
+app.post('/logout', (req, res) => {
+    logged = false
+    req.session.destroy(() => {
+        res.redirect('/');
+    });
+});
+
+app.get('/register', (req, res) => {
+    res.render('register');
+});
+
+app.post('/register', (req, res) => {
+    let valid_email = true;
+    users.forEach((obj) => {
+        if(req.body.email == obj.email){
+            res.send('Email already registered!');
+            valid_email = false;
+        }
+    });
+    if(valid_email){
+        users.push({username: req.body.username, email: req.body.email, password: req.body.password});
+        res.redirect('/');
+    }
+});
+
+app.listen(3000, () => {
     console.log('Server running!');
 });
