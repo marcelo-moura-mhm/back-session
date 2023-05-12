@@ -3,7 +3,7 @@ const session = require('express-session');
 const bodyparser = require('body-parser');
 const path = require('path');
 const ejs = require('ejs');
-const { log } = require('console');
+const bcrypt = require('bcrypt');
 
 const app = express();
 
@@ -17,13 +17,7 @@ app.use(bodyparser.urlencoded({extended:true}));
 app.set('views', path.join(__dirname, '/views'));
 app.set('view engine', 'ejs');
 
-var users = [
-    {
-        username: 'admin',
-        email: 'admin@bcsession.com',
-        password: '123'
-    }
-];
+var users = [];
 
 var logged = false;
 
@@ -36,15 +30,23 @@ app.post('/', (req, res) => {
     console.log(users);
 
     users.forEach((obj) => {
-        if(req.body.username == obj.username && req.body.password == obj.password){
-            logged = true;
-        }
+        if(req.body.username == obj.username){
+            bcrypt.compare(req.body.password, obj.password, (err, value) => {
+                if(value){
+                    res.render('logged', {username:req.body.username});
+                    logged = true
+                }
+            });
+        };
     });
-    if(logged){
+    if(!logged){
+        res.send('<p>User not registered or wrong password</p><form action="/" method="get"><input type=submit /></form>');
+    }
+    /*if(logged){
         res.render('logged', {username:req.body.username});
     }else{
         res.render('index');
-    }
+    }*/
 });
 
 app.post('/logout', (req, res) => {
@@ -67,7 +69,12 @@ app.post('/register', (req, res) => {
         }
     });
     if(valid_email){
-        users.push({username: req.body.username, email: req.body.email, password: req.body.password});
+        bcrypt.genSalt(10, (err, salt) => {
+            bcrypt.hash(req.body.password, salt, (err, hash) => {
+                users.push({username: req.body.username, email: req.body.email, password: hash});
+            });
+        });
+        //users.push({username: req.body.username, email: req.body.email, password: req.body.password});
         res.redirect('/');
     }
 });
